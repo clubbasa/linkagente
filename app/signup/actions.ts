@@ -1,26 +1,32 @@
 "use server";
 
 import { adminDb } from "@/lib/firebase/admin";
+import { getVerticalConfig } from "@/lib/verticals";
+import type { Vertical } from "@/lib/types";
 
 // Crea el documento de agente en Firestore justo después del registro
 // (equivalente al trigger `handle_new_user` que teníamos en Supabase).
-// El slug temporal usa los primeros 8 caracteres del uid.
+// El slug temporal usa los primeros 8 caracteres del uid. El título por
+// defecto depende del giro elegido — ver lib/verticals.ts.
 export async function createAgentProfile({
   uid,
   email,
   fullName,
+  vertical,
 }: {
   uid: string;
   email: string;
   fullName: string;
+  vertical: Vertical;
 }) {
   const slug = `agente-${uid.slice(0, 8)}`;
   const now = new Date().toISOString();
+  const verticalConfig = getVerticalConfig(vertical);
 
   await adminDb.collection("agents").doc(uid).set({
     slug,
     fullName,
-    title: "Asesor Inmobiliario",
+    title: verticalConfig.defaultTitle,
     bio: "",
     photoUrl: null,
     coverUrl: null,
@@ -30,6 +36,7 @@ export async function createAgentProfile({
     brandColor: "#e11d48",
     plan: "free",
     organizationId: null,
+    vertical: verticalConfig.id,
     createdAt: now,
     updatedAt: now,
   });

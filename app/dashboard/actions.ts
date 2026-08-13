@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminDb } from "@/lib/firebase/admin";
 import { requireSessionUid } from "@/lib/firebase/session";
-import type { SocialPlatform } from "@/lib/types";
+import { VERTICALS } from "@/lib/verticals";
+import type { SocialPlatform, Vertical } from "@/lib/types";
 
 export async function updateProfile(formData: FormData) {
   const uid = await requireSessionUid();
@@ -31,6 +32,8 @@ export async function updateProfile(formData: FormData) {
     }
   }
 
+  const vertical = String(formData.get("vertical") ?? "") as Vertical;
+
   await agentRef.set(
     {
       fullName: String(formData.get("full_name") ?? ""),
@@ -42,6 +45,7 @@ export async function updateProfile(formData: FormData) {
       brandColor: String(formData.get("brand_color") ?? "#e11d48"),
       photoUrl: String(formData.get("photo_url") ?? ""),
       ...(slug ? { slug } : {}),
+      ...(vertical && VERTICALS[vertical] ? { vertical } : {}),
       updatedAt: new Date().toISOString(),
     },
     { merge: true }

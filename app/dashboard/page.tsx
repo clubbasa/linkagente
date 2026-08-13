@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { adminDb } from "@/lib/firebase/admin";
 import { getSessionAgent } from "@/lib/firebase/session";
+import { VERTICAL_OPTIONS } from "@/lib/verticals";
 import type { SocialLink } from "@/lib/types";
 import { addSocialLink, deleteSocialLink, updateProfile } from "./actions";
 
@@ -86,6 +87,24 @@ export default async function DashboardProfilePage({
               defaultValue={agent.slug}
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
             />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-zinc-700">Giro de mercado</label>
+            <select
+              name="vertical"
+              defaultValue={agent.vertical}
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+            >
+              {VERTICAL_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-zinc-400">
+              Cambia el catálogo y los campos que se piden — ojo: los ítems que ya tengas guardan sus
+              campos anteriores.
+            </p>
           </div>
           <div>
             <label className="text-sm font-medium text-zinc-700">Foto de perfil (URL)</label>

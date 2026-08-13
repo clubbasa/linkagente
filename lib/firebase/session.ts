@@ -55,6 +55,7 @@ export function docToAgent(uid: string, data: FirebaseFirestore.DocumentData): A
     whatsapp: data.whatsapp ?? null,
     brand_color: data.brandColor ?? "#e11d48",
     plan: data.plan ?? "free",
+    vertical: data.vertical ?? "real_estate",
     created_at: data.createdAt ?? new Date().toISOString(),
     updated_at: data.updatedAt ?? new Date().toISOString(),
   };

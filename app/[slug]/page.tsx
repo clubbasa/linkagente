@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { adminDb } from "@/lib/firebase/admin";
 import { docToAgent } from "@/lib/firebase/session";
-import type { Property, SocialLink } from "@/lib/types";
+import { docToCatalogItem } from "@/lib/firebase/catalog";
+import { getVerticalConfig } from "@/lib/verticals";
+import type { SocialLink } from "@/lib/types";
 import { logProfileView } from "./actions";
 import { ContactForm } from "./contact-form";
 import {
@@ -29,12 +31,6 @@ const socialIcon: Record<string, React.ElementType> = {
   website: Globe,
   tiktok: Music2,
   x: AtSign,
-};
-
-const statusLabel: Record<Property["status"], string> = {
-  featured: "Destacada",
-  for_sale: "En venta",
-  sold: "Vendida",
 };
 
 function buildVCard(fullName: string, title: string, phone?: string | null, email?: string | null) {
@@ -65,10 +61,11 @@ export default async function PublicProfilePage({
   const agentDoc = await adminDb.collection("agents").doc(uid).get();
   if (!agentDoc.exists) notFound();
   const agent = docToAgent(uid, agentDoc.data()!);
+  const vertical = getVerticalConfig(agent.vertical);
 
-  const [linksSnap, propertiesSnap] = await Promise.all([
+  const [linksSnap, catalogSnap] = await Promise.all([
     adminDb.collection("agents").doc(uid).collection("socialLinks").get(),
-    adminDb.collection("agents").doc(uid).collection("properties").orderBy("createdAt", "desc").get(),
+    adminDb.collection("agents").doc(uid).collection("catalogItems").orderBy("createdAt", "desc").get(),
   ]);
 
   const links: SocialLink[] = linksSnap.docs.map((doc) => ({
@@ -79,21 +76,7 @@ export default async function PublicProfilePage({
     position: doc.data().position ?? 0,
   }));
 
-  const properties: Property[] = propertiesSnap.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      agent_id: uid,
-      title: data.title,
-      address: data.address ?? null,
-      price: data.price ?? null,
-      currency: data.currency ?? "USD",
-      status: data.status,
-      photo_url: data.photoUrl ?? null,
-      description: data.description ?? null,
-      created_at: data.createdAt,
-    };
-  });
+  const catalogItems = catalogSnap.docs.map((doc) => docToCatalogItem(uid, doc.id, doc.data()));
 
   await logProfileView(uid);
 
@@ -173,18 +156,18 @@ export default async function PublicProfilePage({
           </a>
         </div>
 
-        {!!properties.length && (
+        {!!catalogItems.length && (
           <div className="mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-              Propiedades
+              {vertical.catalogLabel}
             </h2>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {properties.map((property) => (
-                <div key={property.id} className="overflow-hidden rounded-xl border border-zinc-200">
-                  {property.photo_url && (
+              {catalogItems.map((item) => (
+                <div key={item.id} className="overflow-hidden rounded-xl border border-zinc-200">
+                  {item.photo_url && (
                     <Image
-                      src={property.photo_url}
-                      alt={property.title}
+                      src={item.photo_url}
+                      alt={item.title}
                       width={300}
                       height={160}
                       className="h-32 w-full object-cover"
@@ -195,13 +178,19 @@ export default async function PublicProfilePage({
                       className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
                       style={{ backgroundColor: brandColor }}
                     >
-                      {statusLabel[property.status]}
+                      {vertical.statusLabels[item.status]}
                     </span>
-                    <p className="mt-1 text-sm font-medium text-zinc-900">{property.title}</p>
-                    <p className="text-xs text-zinc-500">{property.address}</p>
-                    {property.price && (
+                    <p className="mt-1 text-sm font-medium text-zinc-900">{item.title}</p>
+                    {vertical.extraFields.map((field) =>
+                      item.extra_fields[field.key] ? (
+                        <p key={field.key} className="text-xs text-zinc-500">
+                          {item.extra_fields[field.key]}
+                        </p>
+                      ) : null
+                    )}
+                    {item.price && (
                       <p className="mt-1 text-sm font-semibold text-zinc-900">
-                        {property.currency} ${property.price.toLocaleString()}
+                        {item.currency} ${item.price.toLocaleString()}
                       </p>
                     )}
                   </div>

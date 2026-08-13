@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionAgent } from "@/lib/firebase/session";
+import { getVerticalConfig } from "@/lib/verticals";
 import { SignOutButton } from "./sign-out-button";
 
 export default async function DashboardLayout({
@@ -14,6 +15,8 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const vertical = getVerticalConfig(session.agent.vertical);
+
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50">
       <header className="border-b border-zinc-200 bg-white">
@@ -25,8 +28,8 @@ export default async function DashboardLayout({
             <Link href="/dashboard" className="hover:text-zinc-900">
               Perfil
             </Link>
-            <Link href="/dashboard/properties" className="hover:text-zinc-900">
-              Propiedades
+            <Link href="/dashboard/catalog" className="hover:text-zinc-900">
+              {vertical.catalogLabel}
             </Link>
             <Link href="/dashboard/leads" className="hover:text-zinc-900">
               Leads

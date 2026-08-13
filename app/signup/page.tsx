@@ -7,6 +7,8 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { createSession } from "../login/actions";
 import { createAgentProfile } from "./actions";
+import { VERTICAL_OPTIONS } from "@/lib/verticals";
+import type { Vertical } from "@/lib/types";
 
 function firebaseErrorToSpanish(code: string) {
   switch (code) {
@@ -33,6 +35,7 @@ export default function SignupPage() {
         const email = String(formData.get("email") ?? "");
         const password = String(formData.get("password") ?? "");
         const fullName = String(formData.get("full_name") ?? "");
+        const vertical = String(formData.get("vertical") ?? "real_estate") as Vertical;
 
         const auth = getFirebaseAuth();
         const credential = await createUserWithEmailAndPassword(auth, email, password);
@@ -40,7 +43,7 @@ export default function SignupPage() {
 
         const idToken = await credential.user.getIdToken();
         await createSession(idToken);
-        await createAgentProfile({ uid: credential.user.uid, email, fullName });
+        await createAgentProfile({ uid: credential.user.uid, email, fullName, vertical });
 
         router.push("/dashboard");
         router.refresh();
@@ -91,6 +94,23 @@ export default function SignupPage() {
               required
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900"
             />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-zinc-700">¿A qué te dedicas?</label>
+            <select
+              name="vertical"
+              defaultValue="real_estate"
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900"
+            >
+              {VERTICAL_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-zinc-400">
+              Esto ajusta el catálogo y los campos a tu giro. Lo puedes cambiar después.
+            </p>
           </div>
           <button
             type="submit"

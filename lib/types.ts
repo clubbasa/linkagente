@@ -8,9 +8,13 @@ export type SocialPlatform =
   | "x"
   | "website";
 
-export type PropertyStatus = "featured" | "for_sale" | "sold";
+export type CatalogItemStatus = "featured" | "for_sale" | "sold";
 
 export type LeadStatus = "new" | "contacted" | "closed";
+
+// Giro de mercado del agente. Determina la terminología y los campos extra
+// del catálogo — ver lib/verticals.ts.
+export type Vertical = "real_estate" | "herbalife" | "sales" | "insurance";
 
 export interface Agent {
   id: string;
@@ -27,6 +31,7 @@ export interface Agent {
   whatsapp: string | null;
   brand_color: string | null;
   plan: "free" | "pro" | "agency";
+  vertical: Vertical;
   created_at: string;
   updated_at: string;
 }
@@ -39,16 +44,20 @@ export interface SocialLink {
   position: number;
 }
 
-export interface Property {
+// Un ítem del catálogo del agente — una propiedad, un producto, una póliza,
+// etc., según su `vertical`. Los campos comunes a todos los giros viven como
+// columnas normales; los específicos de cada giro (dirección, categoría,
+// tipo de plan...) se guardan en `extra_fields` — ver lib/verticals.ts.
+export interface CatalogItem {
   id: string;
   agent_id: string;
   title: string;
-  address: string | null;
   price: number | null;
   currency: string;
-  status: PropertyStatus;
+  status: CatalogItemStatus;
   photo_url: string | null;
   description: string | null;
+  extra_fields: Record<string, string>;
   created_at: string;
 }
 

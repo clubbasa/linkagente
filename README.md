@@ -1,14 +1,18 @@
-# LinkAgente — Fase 1 (MVP)
+# LinkAgente — Fase 1-3 parcial (multi-segmento)
 
-Plataforma tipo "link en bio" para agentes inmobiliarios: perfil público,
-propiedades, redes sociales, captación de leads y login. Construida con
-**Next.js 16 + Firebase (Auth + Firestore) + Tailwind**, pensada para
-desplegarse en **Vercel**.
+Plataforma tipo "link en bio" para vendedores: perfil público, catálogo,
+redes sociales, captación de leads y login. Pensada para servir varios
+**giros de mercado** (inmobiliaria, distribuidores Herbalife/nutrición,
+agentes de ventas en general, seguros/servicios financieros) sobre el mismo
+motor de producto — ver `lib/verticals.ts`. Construida con **Next.js 16 +
+Firebase (Auth + Firestore) + Tailwind**, pensada para desplegarse en
+**Vercel**.
 
 Este repo implementa la **Fase 1** del documento maestro del proyecto
-(perfil público + editor de perfil + propiedades + formulario de contacto).
-Faltan por construir las fases 2-4 (analítica visual, multi-tenant/marca
-blanca, Stripe, integración MLS).
+(perfil público + editor de perfil + catálogo + formulario de contacto) más
+el catálogo configurable por giro de la **Fase 3**. Faltan por construir el
+resto de la Fase 2 (analítica visual, QR) y el resto de la Fase 3
+(multi-tenant/marca blanca, Stripe, panel super-admin).
 
 > **Nota:** el proyecto arrancó sobre Supabase y se migró a Firebase porque
 > ya usábamos Firebase en otro proyecto y queríamos mantener todo en un solo
@@ -39,9 +43,10 @@ npm run dev
 ```
 
 Abre [http://localhost:3000](http://localhost:3000). Crea una cuenta desde
-`/signup` — se te asigna automáticamente un perfil en `/dashboard` y una URL
-pública temporal en `/agente-xxxxxxxx` (puedes cambiar el "slug" desde el
-panel).
+`/signup` — eliges tu giro de mercado ahí mismo (se puede cambiar después
+desde el panel) — y se te asigna automáticamente un perfil en `/dashboard` y
+una URL pública temporal en `/agente-xxxxxxxx` (puedes cambiar el "slug"
+desde el panel).
 
 ## 3. Subir cambios a GitHub
 
@@ -67,10 +72,12 @@ git push
 ```
 app/
   page.tsx                 → landing de marketing
-  login/, signup/           → autenticación (Firebase Auth, componentes cliente)
+  login/, signup/           → autenticación (Firebase Auth, componentes cliente;
+                               signup incluye el selector de giro de mercado)
   dashboard/                → panel del agente (protegido)
-    page.tsx                → editor de perfil + redes sociales
-    properties/              → CRUD de propiedades
+    page.tsx                → editor de perfil + redes sociales + giro de mercado
+    catalog/                 → CRUD del catálogo (propiedades, productos, pólizas...
+                               según el giro — antes se llamaba "properties")
     leads/                   → bandeja de leads capturados
   [slug]/page.tsx           → perfil público (el "link en bio")
 lib/
@@ -79,6 +86,9 @@ lib/
     admin.ts                 → SDK de administrador (Firestore + Auth, solo servidor)
     session.ts                → helpers de sesión (cookie httpOnly, "use server")
     constants.ts              → nombre de la cookie (sin dependencias pesadas)
+    catalog.ts                → mapeo de documentos Firestore → CatalogItem
+  verticals.ts               → configuración de cada giro de mercado (terminología,
+                               campos extra) — ver "Multi-segmento" abajo
   types.ts                  → tipos compartidos
 firebase/
   firestore.rules           → reglas de seguridad (deny-all, ver notas técnicas)
@@ -105,15 +115,26 @@ proxy.ts                    → protege /dashboard (redirige a /login sin sesió
   la cookie exista (para redirigir rápido); la verificación real de que sea
   válida ocurre en el layout del dashboard vía Firebase Admin.
 - **Estructura de datos:** cada agente es un documento en la colección
-  `agents` (id = uid de Firebase Auth), con subcolecciones `socialLinks`,
-  `properties`, `leads` y `analyticsEvents`. La colección `slugs` mapea
-  cada slug público a su uid, para poder resolver `/[slug]` sin tener que
-  escanear toda la colección de agentes.
+  `agents` (id = uid de Firebase Auth, incluye el campo `vertical`), con
+  subcolecciones `socialLinks`, `catalogItems`, `leads` y `analyticsEvents`.
+  La colección `slugs` mapea cada slug público a su uid, para poder resolver
+  `/[slug]` sin tener que escanear toda la colección de agentes.
 - Las imágenes (`next/image`) están configuradas con `unoptimized: true`
-  porque las fotos de perfil/propiedades vienen de URLs externas arbitrarias
+  porque las fotos de perfil/catálogo vienen de URLs externas arbitrarias
   que suben los propios agentes.
 
-## Próximos pasos (Fase 2 en adelante)
+## Multi-segmento (giros de mercado)
+
+Cada agente tiene un `vertical` (`real_estate`, `herbalife`, `sales` o
+`insurance`, ver `lib/verticals.ts`). El giro es **configuración, no código
+distinto**: define el nombre del catálogo ("Propiedades" vs "Catálogo de
+productos"...), el nombre de cada ítem, y qué campos extra se piden — que se
+guardan en un mapa `extraFields` dentro de cada `catalogItems/{id}`, sin
+tener que tocar el esquema de Firestore. Para agregar un giro nuevo: agrega
+una entrada al objeto `VERTICALS` en `lib/verticals.ts`, no hace falta tocar
+el resto del código.
+
+## Próximos pasos (Fase 2-3 en adelante)
 
 Ver la sección "Plan de fases" del documento maestro en Notion: bandeja de
 leads con más detalle, código QR, analítica visual, multi-tenant/marca
