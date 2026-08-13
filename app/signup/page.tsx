@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { createSession } from "../login/actions";
-import { createAgentProfile } from "./actions";
+import { createAgentProfile, getOrganizationInviteName } from "./actions";
 import { VERTICAL_OPTIONS } from "@/lib/verticals";
 import type { Vertical } from "@/lib/types";
 
@@ -23,10 +23,18 @@ function firebaseErrorToSpanish(code: string) {
   }
 }
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const organizationId = searchParams.get("org");
+  const [orgName, setOrgName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!organizationId) return;
+    getOrganizationInviteName(organizationId).then(setOrgName);
+  }, [organizationId]);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -43,7 +51,13 @@ export default function SignupPage() {
 
         const idToken = await credential.user.getIdToken();
         await createSession(idToken);
-        await createAgentProfile({ uid: credential.user.uid, email, fullName, vertical });
+        await createAgentProfile({
+          uid: credential.user.uid,
+          email,
+          fullName,
+          vertical,
+          organizationId,
+        });
 
         router.push("/dashboard");
         router.refresh();
@@ -61,6 +75,12 @@ export default function SignupPage() {
         <p className="mt-1 text-sm text-zinc-500">
           En segundos tendrás tu propio link para compartir con tus clientes.
         </p>
+
+        {organizationId && orgName && (
+          <p className="mt-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
+            Te unes a la red de <strong>{orgName}</strong>.
+          </p>
+        )}
 
         {error && (
           <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
@@ -129,5 +149,13 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }

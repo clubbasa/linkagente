@@ -5,7 +5,7 @@ import { getSessionAgent } from "@/lib/firebase/session";
 import { VERTICAL_OPTIONS } from "@/lib/verticals";
 import { getSiteUrl } from "@/lib/site-url";
 import type { SocialLink } from "@/lib/types";
-import { addSocialLink, deleteSocialLink, updateProfile } from "./actions";
+import { addSocialLink, becomeDistributor, deleteSocialLink, updateProfile } from "./actions";
 
 export default async function DashboardProfilePage({
   searchParams,
@@ -58,6 +58,47 @@ export default async function DashboardProfilePage({
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       )}
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-6">
+        <h2 className="text-lg font-semibold text-zinc-900">Programa de distribuidor</h2>
+        {agent.role === "distributor_admin" ? (
+          <>
+            <p className="mt-2 text-sm text-zinc-600">
+              Ya tienes tu propia red de distribución.
+            </p>
+            <Link
+              href="/distributor"
+              className="mt-3 inline-block rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            >
+              Ir a mi panel de distribuidor
+            </Link>
+          </>
+        ) : (
+          <>
+            <p className="mt-2 text-sm text-zinc-600">
+              ¿Traes contigo a otros agentes/vendedores? Crea tu propia red: tú les compartes su link
+              de invitación, ellos se registran solos, y los ves a todos desde tu panel de
+              distribuidor con tu logo y color.
+            </p>
+            <form action={becomeDistributor} className="mt-3 flex flex-wrap items-end gap-3">
+              <div>
+                <label className="text-sm font-medium text-zinc-700">Nombre de tu red</label>
+                <input
+                  name="org_name"
+                  placeholder={`Red de ${agent.full_name || "tu equipo"}`}
+                  className="mt-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+              >
+                Crear mi red de distribución
+              </button>
+            </form>
+          </>
+        )}
+      </section>
 
       <section className="rounded-2xl border border-zinc-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-zinc-900">Editar perfil</h2>

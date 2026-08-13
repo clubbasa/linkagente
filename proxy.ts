@@ -8,8 +8,11 @@ import { SESSION_COOKIE_NAME } from "@/lib/firebase/constants";
 // importa que sea a prueba de manipulación.
 export function proxy(request: NextRequest) {
   const hasSession = request.cookies.has(SESSION_COOKIE_NAME);
+  const isProtected =
+    request.nextUrl.pathname.startsWith("/dashboard") ||
+    request.nextUrl.pathname.startsWith("/distributor");
 
-  if (!hasSession && request.nextUrl.pathname.startsWith("/dashboard")) {
+  if (!hasSession && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
@@ -19,5 +22,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/distributor/:path*"],
 };

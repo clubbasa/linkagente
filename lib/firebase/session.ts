@@ -44,6 +44,7 @@ export function docToAgent(uid: string, data: FirebaseFirestore.DocumentData): A
     id: uid,
     user_id: uid,
     organization_id: data.organizationId ?? null,
+    role: data.role ?? "agent",
     slug: data.slug,
     full_name: data.fullName ?? "",
     title: data.title ?? "",

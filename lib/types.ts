@@ -16,10 +16,16 @@ export type LeadStatus = "new" | "contacted" | "closed";
 // del catálogo — ver lib/verticals.ts.
 export type Vertical = "real_estate" | "herbalife" | "sales" | "insurance";
 
+// distributor_admin = dueño de una organización (ver Organization abajo),
+// con panel propio en /distributor. super_admin no tiene UI todavía — está
+// reservado para cuando exista el panel de administración total.
+export type Role = "agent" | "distributor_admin" | "super_admin";
+
 export interface Agent {
   id: string;
   user_id: string;
   organization_id: string | null;
+  role: Role;
   slug: string;
   full_name: string;
   title: string | null;
@@ -34,6 +40,19 @@ export interface Agent {
   vertical: Vertical;
   created_at: string;
   updated_at: string;
+}
+
+// Una organización = la red de un distribuidor (o tu propia operación). Los
+// agentes con `organization_id` apuntando a una organización se consideran
+// parte de esa red — ver lib/firebase/organizations.ts.
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  owner_uid: string;
+  logo_url: string | null;
+  brand_color: string | null;
+  created_at: string;
 }
 
 export interface SocialLink {

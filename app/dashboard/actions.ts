@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { adminDb } from "@/lib/firebase/admin";
 import { requireSessionUid } from "@/lib/firebase/session";
 import { VERTICALS } from "@/lib/verticals";
+import { slugify } from "@/lib/slug";
 import type { SocialPlatform, Vertical } from "@/lib/types";
 
 export async function updateProfile(formData: FormData) {
@@ -73,4 +74,47 @@ export async function deleteSocialLink(formData: FormData) {
 
   await adminDb.collection("agents").doc(uid).collection("socialLinks").doc(id).delete();
   revalidatePath("/dashboard");
+}
+
+// Convierte al agente actual en distributor_admin: crea su propia
+// organización y lo asigna a ella. No se puede hacer dos veces — si ya es
+// dueño de una organización, solo lo manda a su panel.
+export async function becomeDistributor(formData: FormData) {
+  const uid = await requireSessionUid();
+  const agentRef = adminDb.collection("agents").doc(uid);
+  const agentSnap = await agentRef.get();
+  const agentData = agentSnap.data();
+
+  if (agentData?.role === "distributor_admin" && agentData?.organizationId) {
+    redirect("/distributor");
+  }
+
+  const name = String(formData.get("org_name") ?? "").trim() || "Mi red de distribución";
+  const baseSlug = slugify(name) || "distribuidor";
+
+  let slug = baseSlug;
+  let suffix = 1;
+  while ((await adminDb.collection("orgSlugs").doc(slug).get()).exists) {
+    suffix += 1;
+    slug = `${baseSlug}-${suffix}`;
+  }
+
+  const orgRef = adminDb.collection("organizations").doc();
+  await orgRef.set({
+    name,
+    slug,
+    ownerUid: uid,
+    logoUrl: null,
+    brandColor: agentData?.brandColor ?? "#e11d48",
+    createdAt: new Date().toISOString(),
+  });
+  await adminDb.collection("orgSlugs").doc(slug).set({ orgId: orgRef.id });
+
+  await agentRef.set(
+    { role: "distributor_admin", organizationId: orgRef.id, updatedAt: new Date().toISOString() },
+    { merge: true }
+  );
+
+  revalidatePath("/dashboard");
+  redirect("/distributor");
 }

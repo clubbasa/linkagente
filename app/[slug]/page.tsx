@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { adminDb } from "@/lib/firebase/admin";
 import { docToAgent } from "@/lib/firebase/session";
 import { docToCatalogItem } from "@/lib/firebase/catalog";
+import { docToOrganization } from "@/lib/firebase/organizations";
 import { getVerticalConfig } from "@/lib/verticals";
 import type { SocialLink } from "@/lib/types";
 import { logProfileView } from "./actions";
@@ -78,6 +80,14 @@ export default async function PublicProfilePage({
   }));
 
   const catalogItems = catalogSnap.docs.map((doc) => docToCatalogItem(uid, doc.id, doc.data()));
+
+  const organization = agent.organization_id
+    ? await adminDb
+        .collection("organizations")
+        .doc(agent.organization_id)
+        .get()
+        .then((snap) => (snap.exists ? docToOrganization(snap.id, snap.data()!) : null))
+    : null;
 
   await logProfileView(uid);
 
@@ -218,6 +228,17 @@ export default async function PublicProfilePage({
             <ContactForm agentId={uid} brandColor={brandColor} />
           </div>
         </div>
+
+        {organization && (
+          <div className="mt-6 border-t border-zinc-100 pt-4 text-center">
+            <Link
+              href={`/d/${organization.slug}`}
+              className="text-xs text-zinc-400 hover:text-zinc-600"
+            >
+              Distribuido por {organization.name}
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -40,6 +40,11 @@ export default async function DashboardLayout({
             <Link href="/dashboard/share" className="hover:text-zinc-900">
               Compartir
             </Link>
+            {session.agent.role === "distributor_admin" && (
+              <Link href="/distributor" className="hover:text-zinc-900">
+                Mi red
+              </Link>
+            )}
             <SignOutButton />
           </nav>
         </div>

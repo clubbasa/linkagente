@@ -10,10 +10,11 @@ Firebase (Auth + Firestore) + Tailwind**, pensada para desplegarse en
 
 Este repo implementa la **Fase 1** completa (perfil público + editor de
 perfil + catálogo + formulario de contacto), la **Fase 2** completa (bandeja
-de leads con notas y detalle, código QR, analítica visual) y el catálogo
-configurable por giro de la **Fase 3**. Falta el resto de la Fase 3
-(multi-tenant/marca blanca para revender a distribuidores, cobros con
-Stripe, panel super-admin).
+de leads con notas y detalle, código QR, analítica visual) y buena parte de
+la **Fase 3**: catálogo configurable por giro, y multi-tenant/marca blanca
+para revender a distribuidores (organizaciones, panel de distribuidor,
+directorio público). Falta cerrar Fase 3: cobros con Stripe y panel
+super-admin.
 
 > **Nota:** el proyecto arrancó sobre Supabase y se migró a Firebase porque
 > ya usábamos Firebase en otro proyecto y queríamos mantener todo en un solo
@@ -83,6 +84,10 @@ app/
                                accesos rápidos de contacto
     analytics/               → vistas/leads/clicks agregados + gráfica simple
     share/                    → link público + código QR descargable
+  distributor/               → panel del distribuidor (protegido, solo role
+                               distributor_admin): marca, link de invitación,
+                               tabla de agentes de su red
+  d/[orgSlug]/page.tsx       → directorio público de una red de distribuidor
   [slug]/
     page.tsx                 → perfil público (el "link en bio")
     tracked-link.tsx          → <a> que registra un evento de click sin bloquear
@@ -96,14 +101,17 @@ lib/
     catalog.ts                → mapeo de documentos Firestore → CatalogItem
     leads.ts                  → mapeo de documentos Firestore → Lead
     analytics.ts               → agregación de analyticsEvents (vistas, leads, clicks)
+    organizations.ts           → mapeo de documentos Firestore → Organization
   verticals.ts               → configuración de cada giro de mercado (terminología,
                                campos extra) — ver "Multi-segmento" abajo
   site-url.ts                → resuelve la URL pública base (dominio propio, Vercel o
                                localhost) para links absolutos y el QR
+  slug.ts                    → normaliza texto libre a slug de URL
   types.ts                  → tipos compartidos
 firebase/
   firestore.rules           → reglas de seguridad (deny-all, ver notas técnicas)
-proxy.ts                    → protege /dashboard (redirige a /login sin sesión)
+proxy.ts                    → protege /dashboard y /distributor (redirige a /login
+                               sin sesión)
 ```
 
 ## Notas técnicas
@@ -161,9 +169,34 @@ el resto del código.
   agrega esos eventos de los últimos 14 días: vistas, leads, tasa de
   conversión, vistas por día y clicks por tipo.
 
-## Próximos pasos (Fase 3 en adelante)
+## Multi-tenant / marca blanca (distribuidores)
 
-Ver la sección "Plan de fases" del documento maestro en Notion:
-multi-tenant/marca blanca para distribuidores (subdominios o dominios
-propios por cliente, separación de datos), cobros con Stripe, panel
-super-admin.
+Modelo de negocio: **reventa con margen** — tú le facturas al distribuidor,
+el distribuidor cobra lo que quiera a sus propios agentes (no hay
+comisiones ni facturación directa a los clientes finales del distribuidor).
+
+- Cualquier agente puede convertirse en distribuidor desde `/dashboard`
+  ("Programa de distribuidor"): esto crea una `organization` de la que es
+  dueño y le cambia el `role` a `distributor_admin`.
+- El distribuidor suma agentes compartiendo su **link de invitación**
+  (`/signup?org={id}`, visible en `/distributor`) — la plataforma no manda
+  correos, el distribuidor lo comparte por su cuenta. Los agentes que
+  entran por ahí siempre quedan con `role: "agent"`, nunca
+  `distributor_admin`.
+- `/distributor` deja editar el nombre, logo y color de la organización, y
+  el slug de su directorio público; y lista a todos los agentes de su red
+  (nunca a los de otro distribuidor).
+- `/d/{slug}` es el directorio público de una red: logo/color del
+  distribuidor + lista de sus agentes con link a cada perfil. Cada perfil
+  público de un agente con organización muestra un badge "Distribuido por
+  X" que enlaza a ese directorio.
+- **Pendiente:** el subdominio real (`{slug}.tudominio.com`) usa el mismo
+  dato (`orgSlugs`) resuelto por hostname en vez de por ruta — se activa el
+  día que haya un dominio propio conectado a Vercel (no es posible con
+  subdominios arbitrarios bajo `vercel.app`), sin tener que tocar el modelo
+  de datos.
+
+## Próximos pasos (cierre de Fase 3)
+
+Ver la sección "Plan de fases" del documento maestro en Notion: cobros con
+Stripe (a ti o a tus distribuidores) y panel super-admin.
