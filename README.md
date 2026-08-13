@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LinkAgente — Fase 1 (MVP)
 
-## Getting Started
+Plataforma tipo "link en bio" para agentes inmobiliarios: perfil público,
+propiedades, redes sociales, captación de leads y login. Construida con
+**Next.js 16 + Supabase + Tailwind**, pensada para desplegarse en **Vercel**.
 
-First, run the development server:
+Este repo implementa la **Fase 1** del [documento maestro del proyecto]
+(perfil público + editor de perfil + propiedades + formulario de contacto).
+Faltan por construir las fases 2-4 (analítica visual, multi-tenant/marca
+blanca, Stripe, integración MLS).
+
+## 1. Conectar tu proyecto de Supabase
+
+1. Crea un proyecto nuevo en [app.supabase.com](https://app.supabase.com).
+2. Ve a **SQL Editor** y pega el contenido completo de
+   `supabase/migrations/0001_init.sql`. Ejecútalo — esto crea todas las
+   tablas, las políticas de seguridad (RLS) y el trigger que crea
+   automáticamente un perfil de agente cuando alguien se registra.
+3. Ve a **Project Settings → API** y copia:
+   - `Project URL`
+   - `anon public` key
+4. Copia `.env.local.example` a `.env.local` y pega esos dos valores.
+
+## 2. Correr el proyecto en local
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre [http://localhost:3000](http://localhost:3000). Crea una cuenta desde
+`/signup` — se te asigna automáticamente un perfil en `/dashboard` y una URL
+pública temporal en `/agente-xxxxxxxx` (puedes cambiar el "slug" desde el
+panel).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 3. Subir el código a GitHub
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+git remote add origin https://github.com/TU-USUARIO/TU-REPO.git
+git add .
+git commit -m "Fase 1: perfil público, propiedades, leads"
+git push -u origin main
+```
 
-## Learn More
+## 4. Desplegar en Vercel
 
-To learn more about Next.js, take a look at the following resources:
+1. Importa el repositorio de GitHub en [vercel.com/new](https://vercel.com/new).
+2. En "Environment Variables" agrega `NEXT_PUBLIC_SUPABASE_URL` y
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` (los mismos valores de tu `.env.local`).
+3. Deploy. Cada vez que subas cambios a `main`, Vercel vuelve a desplegar
+   automáticamente.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Estructura del proyecto
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/
+  page.tsx                 → landing de marketing
+  login/, signup/           → autenticación (Supabase Auth)
+  auth/callback/route.ts   → callback de confirmación de correo
+  dashboard/                → panel del agente (protegido)
+    page.tsx                → editor de perfil + redes sociales
+    properties/              → CRUD de propiedades
+    leads/                   → bandeja de leads capturados
+  [slug]/page.tsx           → perfil público (el "link en bio")
+lib/
+  supabase/                 → clientes de Supabase (browser/server/proxy)
+  types.ts                  → tipos compartidos
+supabase/migrations/
+  0001_init.sql             → esquema completo + RLS + trigger
+proxy.ts                    → protege /dashboard (redirige a /login sin sesión)
+```
 
-## Deploy on Vercel
+## Notas técnicas
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Este proyecto usa **Next.js 16**, que tiene cambios importantes respecto a
+  versiones anteriores (`middleware.ts` → `proxy.ts`, `params`/`cookies()`
+  siempre asíncronos, `next lint` removido en favor de ESLint directo, etc.).
+  Si un asistente de IA va a seguir editando este código, debe leer primero
+  `node_modules/next/dist/docs/` — ver `AGENTS.md`.
+- Las imágenes (`next/image`) están configuradas con `unoptimized: true`
+  porque las fotos de perfil/propiedades vienen de URLs externas arbitrarias
+  que suben los propios agentes.
+- La seguridad de datos (que cada agente solo vea sus propios leads y
+  propiedades) está resuelta a nivel de base de datos con Row Level Security
+  de Supabase, no solo en el código de la app.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Próximos pasos (Fase 2 en adelante)
+
+Ver la sección "Plan de fases" del documento maestro en Notion: bandeja de
+leads con más detalle, código QR, analítica visual, multi-tenant/marca
+blanca para distribuidores, cobros con Stripe.
