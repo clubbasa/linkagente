@@ -8,11 +8,12 @@ motor de producto — ver `lib/verticals.ts`. Construida con **Next.js 16 +
 Firebase (Auth + Firestore) + Tailwind**, pensada para desplegarse en
 **Vercel**.
 
-Este repo implementa la **Fase 1** del documento maestro del proyecto
-(perfil público + editor de perfil + catálogo + formulario de contacto) más
-el catálogo configurable por giro de la **Fase 3**. Faltan por construir el
-resto de la Fase 2 (analítica visual, QR) y el resto de la Fase 3
-(multi-tenant/marca blanca, Stripe, panel super-admin).
+Este repo implementa la **Fase 1** completa (perfil público + editor de
+perfil + catálogo + formulario de contacto), la **Fase 2** completa (bandeja
+de leads con notas y detalle, código QR, analítica visual) y el catálogo
+configurable por giro de la **Fase 3**. Falta el resto de la Fase 3
+(multi-tenant/marca blanca para revender a distribuidores, cobros con
+Stripe, panel super-admin).
 
 > **Nota:** el proyecto arrancó sobre Supabase y se migró a Firebase porque
 > ya usábamos Firebase en otro proyecto y queríamos mantener todo en un solo
@@ -78,8 +79,14 @@ app/
     page.tsx                → editor de perfil + redes sociales + giro de mercado
     catalog/                 → CRUD del catálogo (propiedades, productos, pólizas...
                                según el giro — antes se llamaba "properties")
-    leads/                   → bandeja de leads capturados
-  [slug]/page.tsx           → perfil público (el "link en bio")
+    leads/                   → bandeja de leads: fila expandible, notas internas,
+                               accesos rápidos de contacto
+    analytics/               → vistas/leads/clicks agregados + gráfica simple
+    share/                    → link público + código QR descargable
+  [slug]/
+    page.tsx                 → perfil público (el "link en bio")
+    tracked-link.tsx          → <a> que registra un evento de click sin bloquear
+                               la navegación (teléfono, correo, redes, vCard)
 lib/
   firebase/
     client.ts               → SDK de cliente (solo Auth, en el navegador)
@@ -87,8 +94,12 @@ lib/
     session.ts                → helpers de sesión (cookie httpOnly, "use server")
     constants.ts              → nombre de la cookie (sin dependencias pesadas)
     catalog.ts                → mapeo de documentos Firestore → CatalogItem
+    leads.ts                  → mapeo de documentos Firestore → Lead
+    analytics.ts               → agregación de analyticsEvents (vistas, leads, clicks)
   verticals.ts               → configuración de cada giro de mercado (terminología,
                                campos extra) — ver "Multi-segmento" abajo
+  site-url.ts                → resuelve la URL pública base (dominio propio, Vercel o
+                               localhost) para links absolutos y el QR
   types.ts                  → tipos compartidos
 firebase/
   firestore.rules           → reglas de seguridad (deny-all, ver notas técnicas)
@@ -134,8 +145,25 @@ tener que tocar el esquema de Firestore. Para agregar un giro nuevo: agrega
 una entrada al objeto `VERTICALS` en `lib/verticals.ts`, no hace falta tocar
 el resto del código.
 
-## Próximos pasos (Fase 2-3 en adelante)
+## Fase 2 (leads, QR, analítica)
 
-Ver la sección "Plan de fases" del documento maestro en Notion: bandeja de
-leads con más detalle, código QR, analítica visual, multi-tenant/marca
-blanca para distribuidores, cobros con Stripe.
+- **Leads:** cada lead tiene un campo `notes` (solo visible para el agente)
+  y la fila es expandible con el mensaje completo y accesos rápidos de
+  contacto (llamar, correo, WhatsApp). Si el lead vino desde un ítem del
+  catálogo, se muestra su título.
+- **QR:** `/dashboard/share` genera un código QR (PNG descargable) del link
+  público con la librería `qrcode`, apuntando siempre a la URL real
+  (`lib/site-url.ts` resuelve el dominio — propio si hay uno, si no el de
+  Vercel).
+- **Analítica:** cada visita al perfil y cada click importante (teléfono,
+  correo, WhatsApp, guardar contacto, redes sociales) se registra en
+  `agents/{uid}/analyticsEvents` con un campo `kind`. `/dashboard/analytics`
+  agrega esos eventos de los últimos 14 días: vistas, leads, tasa de
+  conversión, vistas por día y clicks por tipo.
+
+## Próximos pasos (Fase 3 en adelante)
+
+Ver la sección "Plan de fases" del documento maestro en Notion:
+multi-tenant/marca blanca para distribuidores (subdominios o dominios
+propios por cliente, separación de datos), cobros con Stripe, panel
+super-admin.

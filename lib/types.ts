@@ -71,5 +71,25 @@ export interface Lead {
   message: string | null;
   status: LeadStatus;
   source: string;
+  notes: string | null;
+  created_at: string;
+}
+
+// Tipos de evento que se registran en `analyticsEvents` — ver
+// lib/firebase/analytics.ts y app/[slug]/actions.ts.
+export type AnalyticsEventKind =
+  | "profile_view"
+  | "lead_submitted"
+  | "phone_click"
+  | "email_click"
+  | "whatsapp_click"
+  | "vcard_download"
+  | "social_click";
+
+export interface AnalyticsEvent {
+  id: string;
+  type: "view" | "click";
+  kind: AnalyticsEventKind;
+  platform?: string | null;
   created_at: string;
 }

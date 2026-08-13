@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { adminDb } from "@/lib/firebase/admin";
 import { getSessionAgent } from "@/lib/firebase/session";
 import { VERTICAL_OPTIONS } from "@/lib/verticals";
+import { getSiteUrl } from "@/lib/site-url";
 import type { SocialLink } from "@/lib/types";
 import { addSocialLink, deleteSocialLink, updateProfile } from "./actions";
 
@@ -30,6 +31,7 @@ export default async function DashboardProfilePage({
   }));
 
   const publicUrl = `/${agent.slug}`;
+  const absoluteUrl = `${getSiteUrl()}${publicUrl}`;
 
   return (
     <div className="flex flex-col gap-8">
@@ -37,9 +39,15 @@ export default async function DashboardProfilePage({
         <p className="text-sm text-zinc-500">Tu link público</p>
         <div className="mt-1 flex items-center gap-3">
           <Link href={publicUrl} target="_blank" className="font-medium text-zinc-900 underline">
-            tudominio.com{publicUrl}
+            {absoluteUrl}
           </Link>
         </div>
+        <Link
+          href="/dashboard/share"
+          className="mt-2 inline-block text-sm text-zinc-500 underline hover:text-zinc-700"
+        >
+          Ver código QR para compartir
+        </Link>
       </div>
 
       {saved && (

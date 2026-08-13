@@ -34,6 +34,12 @@ export default async function DashboardLayout({
             <Link href="/dashboard/leads" className="hover:text-zinc-900">
               Leads
             </Link>
+            <Link href="/dashboard/analytics" className="hover:text-zinc-900">
+              Analítica
+            </Link>
+            <Link href="/dashboard/share" className="hover:text-zinc-900">
+              Compartir
+            </Link>
             <SignOutButton />
           </nav>
         </div>

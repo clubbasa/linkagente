@@ -19,3 +19,18 @@ export async function updateLeadStatus(formData: FormData) {
 
   revalidatePath("/dashboard/leads");
 }
+
+export async function updateLeadNotes(formData: FormData) {
+  const uid = await requireSessionUid();
+  const id = String(formData.get("id") ?? "");
+  const notes = String(formData.get("notes") ?? "");
+
+  await adminDb
+    .collection("agents")
+    .doc(uid)
+    .collection("leads")
+    .doc(id)
+    .set({ notes }, { merge: true });
+
+  revalidatePath("/dashboard/leads");
+}

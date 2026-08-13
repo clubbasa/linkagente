@@ -7,6 +7,7 @@ import { getVerticalConfig } from "@/lib/verticals";
 import type { SocialLink } from "@/lib/types";
 import { logProfileView } from "./actions";
 import { ContactForm } from "./contact-form";
+import { TrackedLink } from "./tracked-link";
 import {
   AtSign,
   Camera,
@@ -114,8 +115,11 @@ export default async function PublicProfilePage({
               {links.map((link) => {
                 const Icon = socialIcon[link.platform] ?? Globe;
                 return (
-                  <a
+                  <TrackedLink
                     key={link.id}
+                    agentId={uid}
+                    kind="social_click"
+                    platform={link.platform}
                     href={link.url}
                     target="_blank"
                     rel="noreferrer"
@@ -123,7 +127,7 @@ export default async function PublicProfilePage({
                     style={{ backgroundColor: brandColor }}
                   >
                     <Icon size={18} />
-                  </a>
+                  </TrackedLink>
                 );
               })}
             </div>
@@ -131,29 +135,35 @@ export default async function PublicProfilePage({
 
           <div className="mt-5 flex w-full flex-col gap-2 sm:flex-row">
             {agent.phone && (
-              <a
+              <TrackedLink
+                agentId={uid}
+                kind="phone_click"
                 href={`tel:${agent.phone}`}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-300 py-2 text-sm font-medium text-zinc-800"
               >
                 <Phone size={16} /> Llamar
-              </a>
+              </TrackedLink>
             )}
             {agent.email && (
-              <a
+              <TrackedLink
+                agentId={uid}
+                kind="email_click"
                 href={`mailto:${agent.email}`}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-300 py-2 text-sm font-medium text-zinc-800"
               >
                 <Mail size={16} /> Enviar correo
-              </a>
+              </TrackedLink>
             )}
           </div>
-          <a
+          <TrackedLink
+            agentId={uid}
+            kind="vcard_download"
             href={vcardHref}
             download={`${agent.full_name}.vcf`}
             className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 py-2 text-sm font-medium text-zinc-800"
           >
             <UserPlus size={16} /> Guardar contacto
-          </a>
+          </TrackedLink>
         </div>
 
         {!!catalogItems.length && (
