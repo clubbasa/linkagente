@@ -1,27 +1,40 @@
 "use server";
 
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { adminDb } from "@/lib/firebase/admin";
 
-export async function signup(formData: FormData) {
-  const supabase = await createClient();
+// Crea el documento de agente en Firestore justo después del registro
+// (equivalente al trigger `handle_new_user` que teníamos en Supabase).
+// El slug temporal usa los primeros 8 caracteres del uid.
+export async function createAgentProfile({
+  uid,
+  email,
+  fullName,
+}: {
+  uid: string;
+  email: string;
+  fullName: string;
+}) {
+  const slug = `agente-${uid.slice(0, 8)}`;
+  const now = new Date().toISOString();
 
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
-  const fullName = String(formData.get("full_name") ?? "");
-
-  const { error } = await supabase.auth.signUp({
+  await adminDb.collection("agents").doc(uid).set({
+    slug,
+    fullName,
+    title: "Asesor Inmobiliario",
+    bio: "",
+    photoUrl: null,
+    coverUrl: null,
+    phone: null,
     email,
-    password,
-    options: {
-      data: { full_name: fullName },
-    },
+    whatsapp: null,
+    brandColor: "#e11d48",
+    plan: "free",
+    organizationId: null,
+    createdAt: now,
+    updatedAt: now,
   });
 
-  if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
-  }
-
-  // El trigger `handle_new_user` crea automáticamente la fila en `agents`.
-  redirect("/dashboard");
+  // Reserva el slug para poder resolverlo desde la página pública sin tener
+  // que escanear toda la colección de agentes.
+  await adminDb.collection("slugs").doc(slug).set({ uid });
 }

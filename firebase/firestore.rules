@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// Toda la lectura/escritura de datos de la app (perfiles, propiedades,
+// leads, analítica) pasa por Server Actions y Server Components que usan
+// el SDK de Firebase Admin, el cual IGNORA estas reglas (corre con
+// privilegios de administrador). Estas reglas solo protegen el acceso
+// DIRECTO desde el navegador o apps móviles, que esta app no usa —
+// por eso quedan cerradas por defecto.
+//
+// Si en el futuro agregas acceso directo desde el cliente (por ejemplo,
+// subida de imágenes con el SDK de cliente, o una app móvil separada),
+// abre aquí reglas específicas para esos casos en vez de relajar todo.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

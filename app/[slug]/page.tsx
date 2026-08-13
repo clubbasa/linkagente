@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/server";
-import type { Agent, Property, SocialLink } from "@/lib/types";
+import { adminDb } from "@/lib/firebase/admin";
+import { docToAgent } from "@/lib/firebase/session";
+import type { Property, SocialLink } from "@/lib/types";
 import { logProfileView } from "./actions";
 import { ContactForm } from "./contact-form";
 import {
@@ -36,14 +37,14 @@ const statusLabel: Record<Property["status"], string> = {
   sold: "Vendida",
 };
 
-function buildVCard(agent: Agent) {
+function buildVCard(fullName: string, title: string, phone?: string | null, email?: string | null) {
   return [
     "BEGIN:VCARD",
     "VERSION:3.0",
-    `FN:${agent.full_name}`,
-    `TITLE:${agent.title ?? ""}`,
-    agent.phone ? `TEL;TYPE=CELL:${agent.phone}` : "",
-    agent.email ? `EMAIL:${agent.email}` : "",
+    `FN:${fullName}`,
+    `TITLE:${title ?? ""}`,
+    phone ? `TEL;TYPE=CELL:${phone}` : "",
+    email ? `EMAIL:${email}` : "",
     "END:VCARD",
   ]
     .filter(Boolean)
@@ -56,35 +57,50 @@ export default async function PublicProfilePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const supabase = await createClient();
 
-  const { data: agent } = await supabase
-    .from("agents")
-    .select("*")
-    .eq("slug", slug)
-    .single<Agent>();
+  const slugDoc = await adminDb.collection("slugs").doc(slug).get();
+  if (!slugDoc.exists) notFound();
+  const uid = slugDoc.data()!.uid as string;
 
-  if (!agent) notFound();
+  const agentDoc = await adminDb.collection("agents").doc(uid).get();
+  if (!agentDoc.exists) notFound();
+  const agent = docToAgent(uid, agentDoc.data()!);
 
-  const [{ data: links }, { data: properties }] = await Promise.all([
-    supabase
-      .from("social_links")
-      .select("*")
-      .eq("agent_id", agent.id)
-      .order("position")
-      .returns<SocialLink[]>(),
-    supabase
-      .from("properties")
-      .select("*")
-      .eq("agent_id", agent.id)
-      .order("created_at", { ascending: false })
-      .returns<Property[]>(),
+  const [linksSnap, propertiesSnap] = await Promise.all([
+    adminDb.collection("agents").doc(uid).collection("socialLinks").get(),
+    adminDb.collection("agents").doc(uid).collection("properties").orderBy("createdAt", "desc").get(),
   ]);
 
-  await logProfileView(agent.id);
+  const links: SocialLink[] = linksSnap.docs.map((doc) => ({
+    id: doc.id,
+    agent_id: uid,
+    platform: doc.data().platform,
+    url: doc.data().url,
+    position: doc.data().position ?? 0,
+  }));
+
+  const properties: Property[] = propertiesSnap.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      agent_id: uid,
+      title: data.title,
+      address: data.address ?? null,
+      price: data.price ?? null,
+      currency: data.currency ?? "USD",
+      status: data.status,
+      photo_url: data.photoUrl ?? null,
+      description: data.description ?? null,
+      created_at: data.createdAt,
+    };
+  });
+
+  await logProfileView(uid);
 
   const brandColor = agent.brand_color ?? "#e11d48";
-  const vcardHref = `data:text/vcard;charset=utf-8,${encodeURIComponent(buildVCard(agent))}`;
+  const vcardHref = `data:text/vcard;charset=utf-8,${encodeURIComponent(
+    buildVCard(agent.full_name, agent.title ?? "", agent.phone, agent.email)
+  )}`;
 
   return (
     <div className="flex flex-1 justify-center bg-zinc-100 px-4 py-10">
@@ -110,7 +126,7 @@ export default async function PublicProfilePage({
           <p className="text-sm text-zinc-500">{agent.title}</p>
           {agent.bio && <p className="mt-2 text-sm text-zinc-600">{agent.bio}</p>}
 
-          {!!links?.length && (
+          {!!links.length && (
             <div className="mt-4 flex flex-wrap justify-center gap-3">
               {links.map((link) => {
                 const Icon = socialIcon[link.platform] ?? Globe;
@@ -157,7 +173,7 @@ export default async function PublicProfilePage({
           </a>
         </div>
 
-        {!!properties?.length && (
+        {!!properties.length && (
           <div className="mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
               Propiedades
@@ -200,7 +216,7 @@ export default async function PublicProfilePage({
             Contáctame
           </h2>
           <div className="mt-3">
-            <ContactForm agentId={agent.id} brandColor={brandColor} />
+            <ContactForm agentId={uid} brandColor={brandColor} />
           </div>
         </div>
       </div>

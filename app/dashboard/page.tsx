@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import type { Agent, SocialLink } from "@/lib/types";
+import { redirect } from "next/navigation";
+import { adminDb } from "@/lib/firebase/admin";
+import { getSessionAgent } from "@/lib/firebase/session";
+import type { SocialLink } from "@/lib/types";
 import { addSocialLink, deleteSocialLink, updateProfile } from "./actions";
 
 export default async function DashboardProfilePage({
@@ -9,25 +11,24 @@ export default async function DashboardProfilePage({
   searchParams: Promise<{ saved?: string; error?: string }>;
 }) {
   const { saved, error } = await searchParams;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getSessionAgent();
+  if (!session) redirect("/login");
+  const { uid, agent } = session;
 
-  const { data: agent } = await supabase
-    .from("agents")
-    .select("*")
-    .eq("user_id", user!.id)
-    .single<Agent>();
+  const linksSnap = await adminDb
+    .collection("agents")
+    .doc(uid)
+    .collection("socialLinks")
+    .get();
+  const links: SocialLink[] = linksSnap.docs.map((doc) => ({
+    id: doc.id,
+    agent_id: uid,
+    platform: doc.data().platform,
+    url: doc.data().url,
+    position: doc.data().position ?? 0,
+  }));
 
-  const { data: links } = await supabase
-    .from("social_links")
-    .select("*")
-    .eq("agent_id", agent?.id ?? "")
-    .order("position")
-    .returns<SocialLink[]>();
-
-  const publicUrl = agent ? `/${agent.slug}` : "#";
+  const publicUrl = `/${agent.slug}`;
 
   return (
     <div className="flex flex-col gap-8">
@@ -56,7 +57,7 @@ export default async function DashboardProfilePage({
             <label className="text-sm font-medium text-zinc-700">Nombre completo</label>
             <input
               name="full_name"
-              defaultValue={agent?.full_name ?? ""}
+              defaultValue={agent.full_name}
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
             />
           </div>
@@ -64,7 +65,7 @@ export default async function DashboardProfilePage({
             <label className="text-sm font-medium text-zinc-700">Título</label>
             <input
               name="title"
-              defaultValue={agent?.title ?? ""}
+              defaultValue={agent.title ?? ""}
               placeholder="Asesora Inmobiliaria"
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
             />
@@ -73,7 +74,7 @@ export default async function DashboardProfilePage({
             <label className="text-sm font-medium text-zinc-700">Bio corta</label>
             <textarea
               name="bio"
-              defaultValue={agent?.bio ?? ""}
+              defaultValue={agent.bio ?? ""}
               rows={3}
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
             />
@@ -82,7 +83,7 @@ export default async function DashboardProfilePage({
             <label className="text-sm font-medium text-zinc-700">Slug (URL pública)</label>
             <input
               name="slug"
-              defaultValue={agent?.slug ?? ""}
+              defaultValue={agent.slug}
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
             />
           </div>
@@ -90,7 +91,7 @@ export default async function DashboardProfilePage({
             <label className="text-sm font-medium text-zinc-700">Foto de perfil (URL)</label>
             <input
               name="photo_url"
-              defaultValue={agent?.photo_url ?? ""}
+              defaultValue={agent.photo_url ?? ""}
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
             />
           </div>
@@ -98,7 +99,7 @@ export default async function DashboardProfilePage({
             <label className="text-sm font-medium text-zinc-700">Teléfono</label>
             <input
               name="phone"
-              defaultValue={agent?.phone ?? ""}
+              defaultValue={agent.phone ?? ""}
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
             />
           </div>
@@ -106,7 +107,7 @@ export default async function DashboardProfilePage({
             <label className="text-sm font-medium text-zinc-700">Correo público</label>
             <input
               name="email"
-              defaultValue={agent?.email ?? ""}
+              defaultValue={agent.email ?? ""}
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
             />
           </div>
@@ -114,7 +115,7 @@ export default async function DashboardProfilePage({
             <label className="text-sm font-medium text-zinc-700">WhatsApp</label>
             <input
               name="whatsapp"
-              defaultValue={agent?.whatsapp ?? ""}
+              defaultValue={agent.whatsapp ?? ""}
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
             />
           </div>
@@ -123,7 +124,7 @@ export default async function DashboardProfilePage({
             <input
               type="color"
               name="brand_color"
-              defaultValue={agent?.brand_color ?? "#e11d48"}
+              defaultValue={agent.brand_color ?? "#e11d48"}
               className="mt-1 h-10 w-full rounded-lg border border-zinc-300"
             />
           </div>
@@ -141,7 +142,7 @@ export default async function DashboardProfilePage({
       <section className="rounded-2xl border border-zinc-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-zinc-900">Redes sociales</h2>
         <ul className="mt-4 flex flex-col gap-2">
-          {links?.map((link) => (
+          {links.map((link) => (
             <li
               key={link.id}
               className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2 text-sm"
@@ -155,7 +156,7 @@ export default async function DashboardProfilePage({
               </form>
             </li>
           ))}
-          {!links?.length && (
+          {!links.length && (
             <p className="text-sm text-zinc-500">Todavía no agregas redes sociales.</p>
           )}
         </ul>

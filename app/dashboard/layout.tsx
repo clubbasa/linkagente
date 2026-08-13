@@ -1,19 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { signOut } from "./actions";
+import { getSessionAgent } from "@/lib/firebase/session";
+import { SignOutButton } from "./sign-out-button";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getSessionAgent();
 
-  if (!user) {
+  if (!session) {
     redirect("/login");
   }
 
@@ -34,9 +31,7 @@ export default async function DashboardLayout({
             <Link href="/dashboard/leads" className="hover:text-zinc-900">
               Leads
             </Link>
-            <form action={signOut}>
-              <button className="hover:text-zinc-900">Salir</button>
-            </form>
+            <SignOutButton />
           </nav>
         </div>
       </header>

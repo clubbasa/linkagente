@@ -1,14 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { adminDb } from "@/lib/firebase/admin";
+import { requireSessionUid } from "@/lib/firebase/session";
 import type { LeadStatus } from "@/lib/types";
 
 export async function updateLeadStatus(formData: FormData) {
-  const supabase = await createClient();
+  const uid = await requireSessionUid();
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "new") as LeadStatus;
 
-  await supabase.from("leads").update({ status }).eq("id", id);
+  await adminDb
+    .collection("agents")
+    .doc(uid)
+    .collection("leads")
+    .doc(id)
+    .set({ status }, { merge: true });
+
   revalidatePath("/dashboard/leads");
 }

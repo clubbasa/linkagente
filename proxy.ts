@@ -1,12 +1,23 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE_NAME } from "@/lib/firebase/constants";
 
-export async function proxy(request: NextRequest) {
-  return await updateSession(request);
+// Chequeo liviano: solo confirma que la cookie de sesión exista, para
+// redirigir de una vez a /login y evitar parpadeos de contenido protegido.
+// La verificación real (firma válida, no expirada) ocurre en el server
+// component del dashboard vía Firebase Admin, que es donde de verdad
+// importa que sea a prueba de manipulación.
+export function proxy(request: NextRequest) {
+  const hasSession = request.cookies.has(SESSION_COOKIE_NAME);
+
+  if (!hasSession && request.nextUrl.pathname.startsWith("/dashboard")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/dashboard/:path*"],
 };

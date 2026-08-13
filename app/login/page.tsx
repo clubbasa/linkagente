@@ -1,12 +1,48 @@
-import Link from "next/link";
-import { login } from "./actions";
+"use client";
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const { error } = await searchParams;
+import Link from "next/link";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase/client";
+import { createSession } from "./actions";
+
+function firebaseErrorToSpanish(code: string) {
+  switch (code) {
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return "Correo o contraseña incorrectos.";
+    case "auth/too-many-requests":
+      return "Demasiados intentos. Espera un momento e inténtalo de nuevo.";
+    default:
+      return "No se pudo iniciar sesión. Inténtalo de nuevo.";
+  }
+}
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function handleSubmit(formData: FormData) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const email = String(formData.get("email") ?? "");
+        const password = String(formData.get("password") ?? "");
+        const auth = getFirebaseAuth();
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        const idToken = await credential.user.getIdToken();
+        await createSession(idToken);
+        router.push("/dashboard");
+        router.refresh();
+      } catch (err) {
+        const code = err instanceof Error && "code" in err ? String((err as { code: string }).code) : "";
+        setError(firebaseErrorToSpanish(code));
+      }
+    });
+  }
 
   return (
     <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 py-16">
@@ -17,12 +53,10 @@ export default async function LoginPage({
         </p>
 
         {error && (
-          <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-            {error}
-          </p>
+          <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
         )}
 
-        <form action={login} className="mt-6 flex flex-col gap-4">
+        <form action={handleSubmit} className="mt-6 flex flex-col gap-4">
           <div>
             <label className="text-sm font-medium text-zinc-700">Correo</label>
             <input
@@ -43,9 +77,10 @@ export default async function LoginPage({
           </div>
           <button
             type="submit"
-            className="mt-2 w-full rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            disabled={pending}
+            className="mt-2 w-full rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
           >
-            Entrar
+            {pending ? "Entrando..." : "Entrar"}
           </button>
         </form>
 

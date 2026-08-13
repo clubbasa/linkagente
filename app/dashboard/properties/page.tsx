@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { adminDb } from "@/lib/firebase/admin";
+import { getSessionAgent } from "@/lib/firebase/session";
 import type { Property } from "@/lib/types";
 import { deleteProperty } from "./actions";
 
@@ -10,23 +12,32 @@ const statusLabel: Record<Property["status"], string> = {
 };
 
 export default async function PropertiesPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getSessionAgent();
+  if (!session) redirect("/login");
+  const { uid } = session;
 
-  const { data: agent } = await supabase
-    .from("agents")
-    .select("id")
-    .eq("user_id", user!.id)
-    .single();
+  const snap = await adminDb
+    .collection("agents")
+    .doc(uid)
+    .collection("properties")
+    .orderBy("createdAt", "desc")
+    .get();
 
-  const { data: properties } = await supabase
-    .from("properties")
-    .select("*")
-    .eq("agent_id", agent?.id ?? "")
-    .order("created_at", { ascending: false })
-    .returns<Property[]>();
+  const properties: Property[] = snap.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      agent_id: uid,
+      title: data.title,
+      address: data.address ?? null,
+      price: data.price ?? null,
+      currency: data.currency ?? "USD",
+      status: data.status,
+      photo_url: data.photoUrl ?? null,
+      description: data.description ?? null,
+      created_at: data.createdAt,
+    };
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -41,7 +52,7 @@ export default async function PropertiesPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {properties?.map((property) => (
+        {properties.map((property) => (
           <div key={property.id} className="rounded-2xl border border-zinc-200 bg-white p-5">
             <div className="flex items-start justify-between">
               <div>
@@ -71,7 +82,7 @@ export default async function PropertiesPage() {
             </div>
           </div>
         ))}
-        {!properties?.length && (
+        {!properties.length && (
           <p className="text-sm text-zinc-500">
             Todavía no agregas propiedades. Crea la primera con el botón de arriba.
           </p>
