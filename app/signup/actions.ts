@@ -59,12 +59,3 @@ export async function createAgentProfile({
   // que escanear toda la colección de agentes.
   await adminDb.collection("slugs").doc(slug).set({ uid });
 }
-
-// Búsqueda pública (sin sesión) del nombre de una organización a partir de
-// su id, solo para mostrar "Te unes a la red de X" en /signup?org={id}. No
-// expone nada más del documento.
-export async function getOrganizationInviteName(organizationId: string): Promise<string | null> {
-  const snap = await adminDb.collection("organizations").doc(organizationId).get();
-  if (!snap.exists) return null;
-  return (snap.data()?.name as string) ?? null;
-}

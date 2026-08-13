@@ -5,9 +5,9 @@ import { adminDb } from "@/lib/firebase/admin";
 import { docToAgent } from "@/lib/firebase/session";
 import { docToCatalogItem } from "@/lib/firebase/catalog";
 import { docToOrganization } from "@/lib/firebase/organizations";
+import { logProfileView } from "@/lib/firebase/analytics";
 import { getVerticalConfig } from "@/lib/verticals";
 import type { SocialLink } from "@/lib/types";
-import { logProfileView } from "./actions";
 import { ContactForm } from "./contact-form";
 import { TrackedLink } from "./tracked-link";
 import {

@@ -1,5 +1,38 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase/admin";
+import type { AnalyticsEventKind } from "@/lib/types";
+
+// Función simple (no "use server") a propósito: se llama tanto desde
+// Server Actions (app/[slug]/actions.ts, invocadas desde el cliente) como
+// directo durante el render de un Server Component (logProfileView, más
+// abajo). Llamar una función "use server" directo durante el render — en
+// vez de como acción de un <form>/cliente — rompe el bundling de
+// firebase-admin en Vercel (ERR_REQUIRE_ESM de jose/jwks-rsa), así que la
+// lógica compartida vive aquí, en un módulo plano.
+export async function recordAnalyticsEvent(
+  agentUid: string,
+  type: "view" | "click",
+  kind: AnalyticsEventKind,
+  platform?: string | null
+) {
+  await adminDb
+    .collection("agents")
+    .doc(agentUid)
+    .collection("analyticsEvents")
+    .add({
+      type,
+      kind,
+      platform: platform ?? null,
+      createdAt: new Date().toISOString(),
+    });
+}
+
+// Se llama directo desde app/[slug]/page.tsx durante el render (no es una
+// Server Action) — ver la nota arriba sobre por qué no puede vivir en
+// actions.ts.
+export async function logProfileView(agentUid: string) {
+  await recordAnalyticsEvent(agentUid, "view", "profile_view");
+}
 
 export interface AnalyticsSummary {
   totalViews: number;

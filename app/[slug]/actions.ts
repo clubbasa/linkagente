@@ -1,25 +1,8 @@
 "use server";
 
 import { adminDb } from "@/lib/firebase/admin";
+import { recordAnalyticsEvent } from "@/lib/firebase/analytics";
 import type { AnalyticsEventKind } from "@/lib/types";
-
-async function addAnalyticsEvent(
-  agentUid: string,
-  type: "view" | "click",
-  kind: AnalyticsEventKind,
-  platform?: string | null
-) {
-  await adminDb
-    .collection("agents")
-    .doc(agentUid)
-    .collection("analyticsEvents")
-    .add({
-      type,
-      kind,
-      platform: platform ?? null,
-      createdAt: new Date().toISOString(),
-    });
-}
 
 export async function createLead(agentUid: string, propertyId: string | null, formData: FormData) {
   try {
@@ -39,7 +22,7 @@ export async function createLead(agentUid: string, propertyId: string | null, fo
         createdAt: new Date().toISOString(),
       });
 
-    await addAnalyticsEvent(agentUid, "click", "lead_submitted");
+    await recordAnalyticsEvent(agentUid, "click", "lead_submitted");
 
     return { ok: true, message: "¡Gracias! Te contactaremos pronto." };
   } catch {
@@ -47,20 +30,17 @@ export async function createLead(agentUid: string, propertyId: string | null, fo
   }
 }
 
-export async function logProfileView(agentUid: string) {
-  await addAnalyticsEvent(agentUid, "view", "profile_view");
-}
-
 // Se llama desde los links del perfil público (teléfono, correo, WhatsApp,
-// guardar contacto, redes sociales) vía <TrackedLink>. No bloquea la
-// navegación: el link funciona igual aunque esto falle.
+// guardar contacto, redes sociales) vía <TrackedLink>, como Server Action
+// invocada desde el cliente. No bloquea la navegación: el link funciona
+// igual aunque esto falle.
 export async function logClickEvent(
   agentUid: string,
   kind: Exclude<AnalyticsEventKind, "profile_view" | "lead_submitted">,
   platform?: string
 ) {
   try {
-    await addAnalyticsEvent(agentUid, "click", kind, platform ?? null);
+    await recordAnalyticsEvent(agentUid, "click", kind, platform ?? null);
   } catch {
     // No pasa nada si falla el registro — nunca debe romper la navegación.
   }
