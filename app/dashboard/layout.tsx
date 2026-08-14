@@ -45,6 +45,11 @@ export default async function DashboardLayout({
                 Mi red
               </Link>
             )}
+            {session.agent.role === "super_admin" && (
+              <Link href="/superadmin" className="hover:text-zinc-900">
+                Super admin
+              </Link>
+            )}
             <SignOutButton />
           </nav>
         </div>

@@ -10,7 +10,8 @@ export function proxy(request: NextRequest) {
   const hasSession = request.cookies.has(SESSION_COOKIE_NAME);
   const isProtected =
     request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/distributor");
+    request.nextUrl.pathname.startsWith("/distributor") ||
+    request.nextUrl.pathname.startsWith("/superadmin");
 
   if (!hasSession && isProtected) {
     const url = request.nextUrl.clone();
@@ -22,5 +23,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/distributor/:path*"],
+  matcher: ["/dashboard/:path*", "/distributor/:path*", "/superadmin/:path*"],
 };

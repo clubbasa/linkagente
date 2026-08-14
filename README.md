@@ -11,10 +11,10 @@ Firebase (Auth + Firestore) + Tailwind**, pensada para desplegarse en
 Este repo implementa la **Fase 1** completa (perfil público + editor de
 perfil + catálogo + formulario de contacto), la **Fase 2** completa (bandeja
 de leads con notas y detalle, código QR, analítica visual) y buena parte de
-la **Fase 3**: catálogo configurable por giro, y multi-tenant/marca blanca
+la **Fase 3**: catálogo configurable por giro, multi-tenant/marca blanca
 para revender a distribuidores (organizaciones, panel de distribuidor,
-directorio público). Falta cerrar Fase 3: cobros con Stripe y panel
-super-admin.
+directorio público) y panel de super-admin de solo lectura. Falta cerrar
+Fase 3: cobros con Stripe y activar subdominios reales por distribuidor.
 
 > **Nota:** el proyecto arrancó sobre Supabase y se migró a Firebase porque
 > ya usábamos Firebase en otro proyecto y queríamos mantener todo en un solo
@@ -87,6 +87,9 @@ app/
   distributor/               → panel del distribuidor (protegido, solo role
                                distributor_admin): marca, link de invitación,
                                tabla de agentes de su red
+  superadmin/                → panel de solo lectura (protegido, solo role
+                               super_admin): todas las organizaciones y
+                               todos los agentes de la plataforma
   d/[orgSlug]/page.tsx       → directorio público de una red de distribuidor
   [slug]/
     page.tsx                 → perfil público (el "link en bio")
@@ -110,8 +113,8 @@ lib/
   types.ts                  → tipos compartidos
 firebase/
   firestore.rules           → reglas de seguridad (deny-all, ver notas técnicas)
-proxy.ts                    → protege /dashboard y /distributor (redirige a /login
-                               sin sesión)
+proxy.ts                    → protege /dashboard, /distributor y /superadmin (redirige
+                               a /login sin sesión)
 ```
 
 ## Notas técnicas
@@ -196,7 +199,26 @@ comisiones ni facturación directa a los clientes finales del distribuidor).
   subdominios arbitrarios bajo `vercel.app`), sin tener que tocar el modelo
   de datos.
 
+## Panel super-admin
+
+Vista de solo lectura para el dueño de la plataforma (`role: "super_admin"`)
+en `/superadmin`: todas las organizaciones/distribuidores con su dueño y
+cuántos agentes tiene cada red, y una tabla con todos los agentes de la
+plataforma (giro, rol, a qué red pertenecen, link a su perfil público).
+Todavía sin acciones (no se promueve/degrada roles ni se edita nada desde
+aquí) — eso queda para cuando se decida qué controles de soporte hacen falta.
+
+**No hay alta de `super_admin` desde la app, a propósito** (para que ningún
+agente pueda auto-otorgárselo). Para volverte super-admin la primera vez:
+
+1. Ve a **Firebase Console → Firestore Database → agents → {tu uid}**.
+2. Edita el campo `role` y cámbialo a `super_admin` (texto exacto, en
+   minúsculas).
+3. Cierra sesión y vuelve a entrar en LinkAgente — verás el link "Super
+   admin" en el menú del panel.
+
 ## Próximos pasos (cierre de Fase 3)
 
 Ver la sección "Plan de fases" del documento maestro en Notion: cobros con
-Stripe (a ti o a tus distribuidores) y panel super-admin.
+Stripe (a ti o a tus distribuidores) y activar subdominios reales por
+distribuidor cuando haya un dominio propio conectado a Vercel.
