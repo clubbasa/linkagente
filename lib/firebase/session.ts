@@ -57,6 +57,8 @@ export function docToAgent(uid: string, data: FirebaseFirestore.DocumentData): A
     brand_color: data.brandColor ?? "#e11d48",
     plan: data.plan ?? "free",
     vertical: data.vertical ?? "real_estate",
+    subscription_status: data.subscriptionStatus ?? "none",
+    subscription_id: data.subscriptionId ?? null,
     created_at: data.createdAt ?? new Date().toISOString(),
     updated_at: data.updatedAt ?? new Date().toISOString(),
   };

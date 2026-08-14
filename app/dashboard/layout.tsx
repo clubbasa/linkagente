@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionAgent } from "@/lib/firebase/session";
 import { getVerticalConfig } from "@/lib/verticals";
+import { paysDirectly } from "@/lib/billing";
 import { SignOutButton } from "./sign-out-button";
 
 export default async function DashboardLayout({
@@ -40,6 +41,11 @@ export default async function DashboardLayout({
             <Link href="/dashboard/share" className="hover:text-zinc-900">
               Compartir
             </Link>
+            {paysDirectly(session.agent) && (
+              <Link href="/dashboard/billing" className="hover:text-zinc-900">
+                Facturación
+              </Link>
+            )}
             {session.agent.role === "distributor_admin" && (
               <Link href="/distributor" className="hover:text-zinc-900">
                 Mi red

@@ -21,6 +21,16 @@ export type Vertical = "real_estate" | "herbalife" | "sales" | "insurance";
 // reservado para cuando exista el panel de administración total.
 export type Role = "agent" | "distributor_admin" | "super_admin";
 
+// Estado de la suscripción de PayPal, tal cual la reporta su API/webhooks
+// (ver lib/paypal.ts). "none" = nunca se ha suscrito.
+export type SubscriptionStatus =
+  | "none"
+  | "approval_pending"
+  | "active"
+  | "suspended"
+  | "cancelled"
+  | "expired";
+
 export interface Agent {
   id: string;
   user_id: string;
@@ -38,6 +48,11 @@ export interface Agent {
   brand_color: string | null;
   plan: "free" | "pro" | "agency";
   vertical: Vertical;
+  // Cobro con PayPal — solo aplica a quien paga directo a la plataforma
+  // (agentes independientes y distribuidores; ver lib/billing.ts para quién
+  // necesita pagar y quién queda cubierto por la suscripción de su red).
+  subscription_status: SubscriptionStatus;
+  subscription_id: string | null;
   created_at: string;
   updated_at: string;
 }
