@@ -13,7 +13,10 @@
 # Al final imprime el Plan ID (empieza con "P-") — eso va en
 # NEXT_PUBLIC_PAYPAL_PLAN_ID en .env.local / variables de entorno de Vercel.
 
-set -euo pipefail
+set -uo pipefail
+# (Ojo: sin la "e" de errexit a propósito — con pipefail, un grep sin match
+# dentro de una asignación con "$(...)" mataría el script ANTES de llegar a
+# los mensajes de error de abajo. Cada paso valida su propio resultado.)
 
 : "${PAYPAL_CLIENT_ID:?Falta PAYPAL_CLIENT_ID}"
 : "${PAYPAL_CLIENT_SECRET:?Falta PAYPAL_CLIENT_SECRET}"
@@ -30,16 +33,21 @@ echo "== Usando $BASE_URL (PAYPAL_ENV=$PAYPAL_ENV), precio \$$PRICE_MXN MXN/mes 
 
 extract_field() {
   # extract_field '"id":"..."'  <<< "$json"  -> primer valor de ese campo
-  grep -o "\"$1\":\"[^\"]*" | head -1 | cut -d'"' -f4
+  # (el "|| true" evita que un grep sin match tumbe el script por pipefail)
+  grep -o "\"$1\":\"[^\"]*" | head -1 | cut -d'"' -f4 || true
 }
 
 echo "-- Obteniendo access token..."
-TOKEN=$(curl -sS "$BASE_URL/v1/oauth2/token" \
+TOKEN_RESPONSE=$(curl -sS "$BASE_URL/v1/oauth2/token" \
   -u "$PAYPAL_CLIENT_ID:$PAYPAL_CLIENT_SECRET" \
-  -d "grant_type=client_credentials" | extract_field "access_token")
+  -d "grant_type=client_credentials")
+TOKEN=$(printf '%s' "$TOKEN_RESPONSE" | extract_field "access_token")
 
 if [ -z "$TOKEN" ]; then
-  echo "No se pudo obtener el access token. Revisa que el Client ID/Secret sean correctos y correspondan al ambiente ($PAYPAL_ENV)." >&2
+  echo "No se pudo obtener el access token. Respuesta de PayPal:" >&2
+  echo "$TOKEN_RESPONSE" >&2
+  echo "" >&2
+  echo "Revisa que el Client ID/Secret sean correctos y correspondan al ambiente ($PAYPAL_ENV)." >&2
   exit 1
 fi
 echo "   OK"
