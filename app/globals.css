@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
+/* LinkAgente todavía no tiene modo oscuro — todas las pantallas asumen
+   fondo claro (bg-white / bg-zinc-50) con texto oscuro (text-zinc-900).
+   "color-scheme: light" evita que el navegador aplique su propio tema
+   oscuro a controles nativos (inputs, selects, scrollbars) cuando el
+   sistema operativo del usuario está en modo oscuro — si no, el texto de
+   los formularios se vuelve casi blanco sobre fondo blanco e ilegible. */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -10,13 +17,6 @@
   --color-foreground: var(--foreground);
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
