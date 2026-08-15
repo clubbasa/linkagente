@@ -6,6 +6,7 @@ import { VERTICAL_OPTIONS } from "@/lib/verticals";
 import { getSiteUrl } from "@/lib/site-url";
 import type { SocialLink } from "@/lib/types";
 import { addSocialLink, becomeDistributor, deleteSocialLink, updateProfile } from "./actions";
+import { ImageUploadField } from "./image-upload-field";
 
 export default async function DashboardProfilePage({
   searchParams,
@@ -156,11 +157,11 @@ export default async function DashboardProfilePage({
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-zinc-700">Foto de perfil (URL)</label>
-            <input
+            <ImageUploadField
               name="photo_url"
-              defaultValue={agent.photo_url ?? ""}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+              label="Foto de perfil"
+              defaultValue={agent.photo_url}
+              folder="profile-photos"
             />
           </div>
           <div>

@@ -2,6 +2,7 @@
 
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -19,4 +20,10 @@ export function getFirebaseApp() {
 
 export function getFirebaseAuth() {
   return getAuth(getFirebaseApp());
+}
+
+// Usado por <ImageUploadField> (ver app/dashboard/image-upload-field.tsx)
+// para subir fotos de perfil y de catálogo directo desde el navegador.
+export function getFirebaseStorage() {
+  return getStorage(getFirebaseApp());
 }

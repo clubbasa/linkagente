@@ -1,0 +1,37 @@
+rules_version = '2';
+
+// A diferencia de Firestore (ver firestore.rules), aquí SÍ hay subida
+// directa desde el navegador: <ImageUploadField> (app/dashboard/image-upload-field.tsx)
+// usa el SDK de cliente de Firebase Storage para subir fotos de perfil y de
+// catálogo sin pasar por un Server Action. Estas reglas son la única
+// protección para esa subida — hay que aplicarlas.
+//
+// Cada agente solo puede escribir dentro de su propia carpeta
+// (profile-photos/{su-uid}/... y catalog-photos/{su-uid}/...), con límite de
+// tamaño (5MB) y solo archivos de tipo imagen. La lectura es pública porque
+// estas fotos se muestran en el perfil público (/[slug]) y en los catálogos,
+// que cualquiera puede visitar sin iniciar sesión.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /profile-photos/{uid}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    match /catalog-photos/{uid}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Cualquier otra ruta queda cerrada por defecto.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

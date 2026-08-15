@@ -2,6 +2,7 @@
 
 import type { CatalogItem } from "@/lib/types";
 import type { VerticalConfig } from "@/lib/verticals";
+import { ImageUploadField } from "../image-upload-field";
 
 export function CatalogItemForm({
   item,
@@ -83,11 +84,11 @@ export function CatalogItemForm({
         </select>
       </div>
       <div>
-        <label className="text-sm font-medium text-zinc-700">Foto (URL)</label>
-        <input
+        <ImageUploadField
           name="photo_url"
-          defaultValue={item?.photo_url ?? ""}
-          className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+          label="Foto"
+          defaultValue={item?.photo_url}
+          folder="catalog-photos"
         />
       </div>
       <div className="sm:col-span-2">
