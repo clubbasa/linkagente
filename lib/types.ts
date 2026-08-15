@@ -48,6 +48,10 @@ export interface Agent {
   brand_color: string | null;
   plan: "free" | "pro" | "agency";
   vertical: Vertical;
+  // true = el super_admin la suspendió desde /superadmin: no puede entrar a
+  // /dashboard ni /distributor, y su perfil público (/[slug]) deja de
+  // existir (404) — ver app/superadmin/actions.ts.
+  suspended: boolean;
   // Cobro con PayPal — solo aplica a quien paga directo a la plataforma
   // (agentes independientes y distribuidores; ver lib/billing.ts para quién
   // necesita pagar y quién queda cubierto por la suscripción de su red).

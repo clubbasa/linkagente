@@ -16,6 +16,26 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  // Cuenta suspendida por un super_admin desde /superadmin: se bloquea todo
+  // el dashboard (y /distributor, ver ese layout) en vez de dejarla entrar
+  // y toparse con errores de permisos a medias.
+  if (session.agent.suspended) {
+    return (
+      <div className="flex min-h-full flex-1 flex-col items-center justify-center bg-zinc-50 px-4">
+        <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-lg font-semibold text-zinc-900">Cuenta suspendida</h1>
+          <p className="mt-2 text-sm text-zinc-600">
+            Tu cuenta de LinkAgente está suspendida. Si crees que es un error, contacta al
+            administrador de la plataforma.
+          </p>
+          <div className="mt-4">
+            <SignOutButton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const vertical = getVerticalConfig(session.agent.vertical);
 
   return (

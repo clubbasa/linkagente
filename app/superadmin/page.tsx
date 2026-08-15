@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { adminDb } from "@/lib/firebase/admin";
 import { getSessionAgent } from "@/lib/firebase/session";
 import { VERTICALS } from "@/lib/verticals";
+import { setAgentRole, setAgentSuspended } from "./actions";
+import { RoleSelect } from "./role-select";
 
 const ROLE_LABELS: Record<string, string> = {
   agent: "Agente",
@@ -10,16 +12,24 @@ const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super admin",
 };
 
-// Panel de solo lectura para el dueño de la plataforma (role "super_admin"):
-// una vista de todas las organizaciones/distribuidores y todos los agentes,
-// sin importar a qué red pertenezcan. No hay mutaciones aquí todavía (sin
-// Stripe, sin promover/degradar roles desde la UI) — ver sección 4.2/8 del
-// documento maestro en Notion para el alcance de esta primera versión.
+// Panel para el dueño de la plataforma (role "super_admin"): vista de todas
+// las organizaciones/distribuidores y todos los agentes, sin importar a qué
+// red pertenezcan, con dos mutaciones (ver app/superadmin/actions.ts):
+// cambiar el rol de un agente y suspender/reactivar su cuenta. Ninguna de
+// las dos se puede aplicar sobre uno mismo, para no poder bloquearse por
+// accidente.
 //
-// No hay flujo de alta para "super_admin" (no se puede auto-otorgar desde la
-// app, a propósito): el primer super_admin se marca a mano en la consola de
-// Firebase (agents/{uid}.role = "super_admin").
-export default async function SuperAdminPage() {
+// No hay flujo para AUTO-otorgarse "super_admin" (el primer super_admin se
+// marca a mano en la consola de Firebase) — pero un super_admin ya
+// autenticado sí puede promover a otro agente a super_admin desde aquí,
+// como cualquier otra acción de este panel: queda gateada por el chequeo de
+// rol en requireSuperAdmin(), no por el cliente.
+export default async function SuperAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string; error?: string }>;
+}) {
+  const { saved, error } = await searchParams;
   const session = await getSessionAgent();
   if (!session) redirect("/login");
   if (session.agent.role !== "super_admin") redirect("/dashboard");
@@ -40,6 +50,7 @@ export default async function SuperAdminPage() {
         slug: String(data.slug ?? ""),
         role: String(data.role ?? "agent"),
         organizationId: (data.organizationId as string | null) ?? null,
+        suspended: Boolean(data.suspended ?? false),
         createdAt: String(data.createdAt ?? ""),
       };
     })
@@ -82,6 +93,15 @@ export default async function SuperAdminPage() {
           Volver a mi perfil
         </Link>
       </div>
+
+      {saved && (
+        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+          Cambio guardado correctamente.
+        </p>
+      )}
+      {error && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+      )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {stats.map((stat) => (
@@ -144,6 +164,7 @@ export default async function SuperAdminPage() {
                 <th className="px-4 py-3">Giro</th>
                 <th className="px-4 py-3">Rol</th>
                 <th className="px-4 py-3">Red</th>
+                <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3">Perfil público</th>
               </tr>
             </thead>
@@ -152,18 +173,61 @@ export default async function SuperAdminPage() {
                 const org = agent.organizationId
                   ? organizations.find((candidate) => candidate.id === agent.organizationId)
                   : null;
+                const isSelf = agent.uid === session.uid;
                 return (
                   <tr key={agent.uid} className="border-t border-zinc-100">
-                    <td className="px-4 py-3 font-medium text-zinc-900">{agent.fullName}</td>
+                    <td className="px-4 py-3 font-medium text-zinc-900">
+                      {agent.fullName}
+                      {isSelf && <span className="ml-1 text-xs text-zinc-400">(tú)</span>}
+                    </td>
                     <td className="px-4 py-3 text-zinc-600">{agent.email}</td>
                     <td className="px-4 py-3 text-zinc-600">
                       {VERTICALS[agent.vertical as keyof typeof VERTICALS]?.label ?? agent.vertical}
                     </td>
                     <td className="px-4 py-3 text-zinc-600">
-                      {ROLE_LABELS[agent.role] ?? agent.role}
+                      {isSelf ? (
+                        ROLE_LABELS[agent.role] ?? agent.role
+                      ) : (
+                        <RoleSelect uid={agent.uid} role={agent.role} action={setAgentRole} />
+                      )}
                     </td>
                     <td className="px-4 py-3 text-zinc-600">
                       {org ? org.name : "Independiente"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {isSelf || agent.role === "super_admin" ? (
+                        <span
+                          className={
+                            agent.suspended
+                              ? "text-red-600"
+                              : "text-zinc-500"
+                          }
+                        >
+                          {agent.suspended ? "Suspendida" : "Activa"}
+                        </span>
+                      ) : (
+                        <form action={setAgentSuspended} className="flex items-center gap-2">
+                          <input type="hidden" name="uid" value={agent.uid} />
+                          <input
+                            type="hidden"
+                            name="suspended"
+                            value={agent.suspended ? "false" : "true"}
+                          />
+                          {agent.suspended && (
+                            <span className="text-xs font-medium text-red-600">Suspendida</span>
+                          )}
+                          <button
+                            type="submit"
+                            className={
+                              agent.suspended
+                                ? "rounded-lg bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-900 hover:bg-zinc-200"
+                                : "rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                            }
+                          >
+                            {agent.suspended ? "Reactivar" : "Suspender"}
+                          </button>
+                        </form>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <Link href={`/${agent.slug}`} target="_blank" className="text-zinc-900 underline">

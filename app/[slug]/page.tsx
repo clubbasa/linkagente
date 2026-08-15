@@ -64,6 +64,9 @@ export default async function PublicProfilePage({
   const agentDoc = await adminDb.collection("agents").doc(uid).get();
   if (!agentDoc.exists) notFound();
   const agent = docToAgent(uid, agentDoc.data()!);
+  // Cuenta suspendida por un super_admin (ver app/superadmin/actions.ts):
+  // el perfil público deja de existir, igual que si nunca hubiera existido.
+  if (agent.suspended) notFound();
   const vertical = getVerticalConfig(agent.vertical);
 
   const [linksSnap, catalogSnap] = await Promise.all([
